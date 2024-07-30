@@ -65,7 +65,7 @@ mrcat - ${DICOMDIR}/DWI_b0_PA/ -axis 3 b0s_paired.mif
 
 # Perform image geometric distortion corrections making use of these data
 dwifslpreproc dwi_den_unr.mif dwi_den_unr_preproc.mif \
--pe_dir AP -rpe_pair -se_epi b0s_paired.mif -eddy_options “ --repol”
+-pe_dir AP -rpe_pair -se_epi b0s_paired.mif -eddy_options " --repol"
 
 ###############################################################
 # 8. PREPROCESSING IV: BIAS FIELD CORRECTION
