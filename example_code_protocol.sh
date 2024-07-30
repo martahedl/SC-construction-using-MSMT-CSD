@@ -40,7 +40,7 @@ mrconvert ${DICOMDIR}/T1w/ T1w.nii.gz
 # 4. RUN FREESURFER
 ###############################################################
 
-recon-all –s ${SUBJECTID} -i T1w.nii.gz -all
+recon-all -s ${SUBJECTID} -i T1w.nii.gz -all
 
 ###############################################################
 # 5. PREPROCESSING I: DENOISE
