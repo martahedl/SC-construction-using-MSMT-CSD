@@ -40,7 +40,7 @@ mrconvert ${DICOMDIR}/T1w/ T1w.nii.gz
 # 4. RUN FREESURFER
 ###############################################################
 
-recon-all -s ${SUBJECTID} -i T1w.nii.gz -all
+recon-all –s ${SUBJECTID} -i T1w.nii.gz -all
 
 ###############################################################
 # 5. PREPROCESSING I: DENOISE
@@ -65,7 +65,7 @@ mrcat - ${DICOMDIR}/DWI_b0_PA/ -axis 3 b0s_paired.mif
 
 # Perform image geometric distortion corrections making use of these data
 dwifslpreproc dwi_den_unr.mif dwi_den_unr_preproc.mif \
--pe_dir AP -rpe_pair -se_epi b0s_paired.mif -eddy_options " --repol"
+-pe_dir AP -rpe_pair -se_epi b0s_paired.mif -eddy_options “ --repol”
 
 ###############################################################
 # 8. PREPROCESSING IV: BIAS FIELD CORRECTION
@@ -81,13 +81,18 @@ dwibiascorrect ants dwi_den_unr_preproc.mif dwi_den_unr_preproc_unb.mif -bias bi
 dwiextract dwi_den_unr_preproc_unb.mif - -bzero | \
 mrmath - mean mean_b0_preproc.nii.gz -axis 3
 
+# Correct for bias field in T1w image:
+
+N4BiasFieldCorrection -d 3 -i T1w.nii.gz -s 2 -o T1w_bc.nii.gz
+
 # Perform linear registration with 6 degrees of freedom:
-flirt -in mean_b0_preproc.nii.gz -ref T1w.nii.gz \
--dof 6 -omat diff2struct_fsl.mat
+flirt -in mean_b0_preproc.nii.gz \
+  -ref T1w_bc.nii.gz -dof 6 -cost normmi \
+  -omat diff2struct_fsl.mat
 
 # Convert the resulting linear transformation matrix from FSL to MRtrix format:
 transformconvert diff2struct_fsl.mat mean_b0_preproc.nii.gz \
-T1w.nii.gz flirt_import diff2struct_mrtrix.txt
+T1w_bc.nii.gz flirt_import diff2struct_mrtrix.txt
 
 # Apply linear transformation to header of diffusion-weighted image:
 mrtransform dwi_den_unr_preproc_unb.mif -linear \
@@ -149,9 +154,9 @@ sift2_weights.txt -out_mu sift2_mu.txt
 # 17. SC MATRIX GENERATION I: CONVERT PARCELLATION IMAGE
 ###############################################################
 
- labelconvert ${SUBJECTS_DIR}/${SUBJECTID}/mri/aparc+aseg.mgz \
- ${FREESURFER_HOME}/FreeSurferColorLUT.txt \
- $(which labelconvert)/../share/mrtrix3/labelconvert/fs_default.txt DK_parcels.mif
+labelconvert ${SUBJECTS_DIR}/${SUBJECTID}/mri/aparc+aseg.mgz \
+${FREESURFER_HOME}/FreeSurferColorLUT.txt \
+$(which labelconvert)/../share/mrtrix3/labelconvert/fs_default.txt DK_parcels.mif
 
  ###############################################################
  # 18. SC MATRIX GENERATION II: CREATE MATRIX
