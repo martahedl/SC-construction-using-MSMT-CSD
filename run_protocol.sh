@@ -58,6 +58,7 @@ dwidenoise ${DATADIR}/dwi.mif ${OUTDIR}/dwi_den.mif \
 
 mrdegibbs ${OUTDIR}/dwi_den.mif ${OUTDIR}/dwi_den_unr.mif
 
+
 ###############################################################
 # 7. PREPROCESSING III: MOTION/DISTORTION CORRECTION
 ###############################################################
@@ -164,7 +165,7 @@ tckgen ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/tracks_10m.tck \
 # 16. TRACTOGRAM OPTIMIZATION: SIFT2 FILTERING
 ###############################################################
 
-tcksift2 ${OUTDIR}/tracks_10m.tck ${OUTDIR}/wmfod_norm.mif sift2_weights.txt \
+tcksift2 ${OUTDIR}/tracks_10m.tck ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/sift2_weights.txt \
 -act ${OUTDIR}/5tt.mif \
 -out_mu ${OUTDIR}/sift2_mu.txt
 
