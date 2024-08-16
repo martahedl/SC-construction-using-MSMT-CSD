@@ -42,8 +42,10 @@ RUN tar -xf acpcdetect_V2.1_LinuxCentOS6.7.tar.gz
 FROM base-builder AS ants-installer
 ARG MAKE_JOBS
 WORKDIR /opt/ants
-RUN wget https://github.com/ANTsX/ANTs/releases/download/v2.5.3/ants-2.5.3-ubuntu-22.04-X64-gcc.zip
-RUN unzip ants-2.5.3-ubuntu-22.04-X64-gcc.zip \
+RUN wget https://github.com/ANTsX/ANTs/releases/download/v2.5.3/ants-2.5.3-ubuntu-22.04-X64-gcc.zip \
+    && unzip ants-2.5.3-ubuntu-22.04-X64-gcc.zip \
+    && mv ants-2.5.3/bin ants-2.5.3/lib . \
+    && rmdir ants-2.5.3 \
     && rm ants-2.5.3-ubuntu-22.04-X64-gcc.zip
 
 # Install FreeSurfer
@@ -119,6 +121,7 @@ RUN apt-get -qq update \
         qtbase5-dev \
         pigz \
         python3 \
+        python3-distutils \
         tcsh \
     && rm -rf /var/lib/apt/lists/*
 
@@ -138,14 +141,16 @@ WORKDIR /
 
 ENV ANTSPATH=/opt/ants/bin \
     ARTHOME=/opt/art \
+    FIX_VERTEX_AREA= \
     FMRI_ANALYSIS_DIR=/opt/freesurfer/fsfast \
     FREESURFER=/opt/freesurfer \
     FREESURFER_HOME=/opt/freesurfer \
     FSFAST_HOME=/opt/freesurfer/fsfast \
+    FSF_OUTPUT_FORMAT=.nii \
     FSLDIR=/opt/fsl \
     FSLGECUDAQ=cuda.q \
     FSLMULTIFILEQUIT=TRUE \
-    FSLOUTPUTTYPE=NIFTI_GZ \
+    FSLOUTPUTTYPE=NIFTI \
     FSLTCLSH=/opt/fsl/bin/fsltclsh \
     FSLWISH=/opt/fsl/bin/fslwish \
     FSL_BIN=/opt/fsl/bin \
@@ -161,7 +166,8 @@ ENV ANTSPATH=/opt/ants/bin \
     MNI_DATAPATH=/opt/freesurfer/mni/data \
     MNI_DIR=/opt/freesurfer/mni \
     MNI_PERL5LIB=/opt/freesurfer/mni/share/perl5 \
-    PATH="/opt/mrtrix3/bin:/opt/ants/bin:/opt/art/bin:/opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/opt/freesurfer/tktools:/opt/fsl/share/fsl/bin:$PATH" \
+    OS=Linux \
+    PATH="/opt/mrtrix3/bin:/opt/ants/bin:/opt/art/bin:/opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/opt/freesurfer/mni/bin:/opt/freesurfer/tktools:/opt/fsl/share/fsl/bin:$PATH" \
     PERL5LIB=/opt/freesurfer/mni/share/perl5 \
     SUBJECTS_DIR=/opt/freesurfer/subjects
 

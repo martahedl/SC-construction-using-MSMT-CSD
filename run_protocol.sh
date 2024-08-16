@@ -36,13 +36,13 @@ SUBJECTID="subject_00"
 # 3. CONVERT T1W IMAGE TO NIFTI FORMAT
 ###############################################################
 
-mrconvert ${DATADIR}/T1w.mif ${OUTDIR}/T1w.nii.gz
+mrconvert ${DATADIR}/T1w.mif ${OUTDIR}/T1w.nii
 
 ###############################################################
 # 4. RUN FREESURFER
 ###############################################################
 
-recon-all -s ${SUBJECTID} -i ${OUTDIR}/T1w.nii.gz -all
+recon-all -s ${SUBJECTID} -i ${OUTDIR}/T1w.nii -all -openmp 4
 cp -r ${SUBJECTS_DIR}/${SUBJECTID} ${OUTDIR}/freesurfer
 
 ###############################################################
@@ -87,23 +87,22 @@ dwibiascorrect ants ${OUTDIR}/dwi_den_unr_preproc.mif ${OUTDIR}/dwi_den_unr_prep
 # Extract b=0 volumes and calculate the mean.
 # Export to NIFTI format for compatibility with FSL.
 dwiextract ${OUTDIR}/dwi_den_unr_preproc_unb.mif - -bzero | \
-mrmath - mean ${OUTDIR}/mean_b0_preproc.nii.gz -axis 3
+mrmath - mean ${OUTDIR}/mean_b0_preproc.nii -axis 3
 
 # Correct for bias field in T1w image:
-
-N4BiasFieldCorrection -d 3 -i ${OUTDIR}T1w.nii.gz -s 2 -o ${OUTDIR}/T1w_bc.nii.gz
+N4BiasFieldCorrection -d 3 -i ${OUTDIR}/T1w.nii -s 2 -o ${OUTDIR}/T1w_bc.nii
 
 # Perform linear registration with 6 degrees of freedom:
-flirt -in ${OUTDIR}/mean_b0_preproc.nii.gz -ref ${OUTDIR}/T1w_bc.nii.gz \
+flirt -in ${OUTDIR}/mean_b0_preproc.nii -ref ${OUTDIR}/T1w_bc.nii \
 -dof 6 -cost normmi \
 -omat ${OUTDIR}/diff2struct_fsl.mat
 
 # Convert the resulting linear transformation matrix from FSL to MRtrix format:
-transformconvert ${OUTDIR}/diff2struct_fsl.mat ${OUTDIR}/mean_b0_preproc.nii.gz \
-${OUTDIR}/T1w_bc.nii.gz flirt_import ${OUTDIR}/diff2struct_mrtrix.txt
+transformconvert ${OUTDIR}/diff2struct_fsl.mat ${OUTDIR}/mean_b0_preproc.nii \
+${OUTDIR}/T1w_bc.nii flirt_import ${OUTDIR}/diff2struct_mrtrix.txt
 
 # Apply linear transformation to header of diffusion-weighted image:
-mrtransform ${OUTDIR}/dwi_den_unr_preproc_unb.mif ${OUTDIR}/dwi_den_unr_preproc_unb_coreg.mif
+mrtransform ${OUTDIR}/dwi_den_unr_preproc_unb.mif ${OUTDIR}/dwi_den_unr_preproc_unb_coreg.mif \
 -linear ${OUTDIR}/diff2struct_mrtrix.txt \
 
 ###############################################################
@@ -156,7 +155,7 @@ ${OUTDIR}/csf.mif ${OUTDIR}/csf_norm.mif \
 # 15. CREATE WHOLE-BRAIN TRACTOGRAM II: STREAMLINE GENERATION
 ###############################################################
 
-tckgen ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/tracks_10m.tck
+tckgen ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/tracks_10m.tck \
 -algorithm ifod2 -select 10m \
 -act ${OUTDIR}/5tt.mif -backtrack \
 -seed_dynamic ${OUTDIR}/wmfod_norm.mif
