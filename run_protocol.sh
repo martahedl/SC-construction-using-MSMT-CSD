@@ -147,10 +147,11 @@ ${OUTDIR}/csf.mif ${OUTDIR}/csf_norm.mif \
 ###############################################################
 
 # Input to the command is the FreeSurfer subject directory.
-# If FreeSurfer has been set up correctly, environment variable
-# SUBJECTS_DIR is set during FreeSurfer configuration.
-# Environment variable SUBJECTID was set in step 2.
-5ttgen hsvs ${SUBJECTS_DIR}/${SUBJECTID} ${OUTDIR}/5tt.mif
+# The version of the FreeSurfer subject directory
+#   that has already been duplicated in the output directory
+#   is used here as it simplifies resumption of partially
+#   completed executions
+5ttgen hsvs ${OUTDIR}/freesurfer ${OUTDIR}/5tt.mif
 
 ###############################################################
 # 15. CREATE WHOLE-BRAIN TRACTOGRAM II: STREAMLINE GENERATION
@@ -173,9 +174,10 @@ tcksift2 ${OUTDIR}/tracks_10m.tck ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/sift2_weigh
 # 17. SC MATRIX GENERATION I: CONVERT PARCELLATION IMAGE
 ###############################################################
 
-labelconvert ${SUBJECTS_DIR}/${SUBJECTID}/mri/aparc+aseg.mgz \
+labelconvert ${OUTDIR}/freesurfer/mri/aparc+aseg.mgz \
 ${FREESURFER_HOME}/FreeSurferColorLUT.txt \
-/opt/mrtrix3/share/mrtrix3/labelconvert/fs_default.txt ${OUTDIR}/DK_parcels.mif
+/opt/mrtrix3/share/mrtrix3/labelconvert/fs_default.txt \
+${OUTDIR}/DK_parcels.mif
 
 ###############################################################
 # 18. SC MATRIX GENERATION II: CREATE MATRIX
