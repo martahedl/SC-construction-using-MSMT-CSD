@@ -43,13 +43,13 @@ The Docker image to execute the container can be obtained in one of two ways:
     Execute the following command from the root directory of the cloned repository
     (having previously downloaded the ACPCDetect dependency; see above):
     ```bash
-    docker build . -t martahedl/sc-construction-using-msmt-csd
+    docker build . -t martah/sc-construction-using-msmt-csd
     ```
 
 2.  Pull the image from DockerHub:
 
     ```bash
-    docker pull martahedl/sc-construction-using-msmt-csd
+    docker pull martah/sc-construction-using-msmt-csd
     ```
 
     **NOTE**: Not yet available at time of writing.
@@ -71,7 +71,7 @@ mkdir input/ output/
     ```bash
     docker run -it --rm \
     -v $(pwd)/input:/input \
-    martahedl/sc-construction-using-msmt-csd \
+    martah/sc-construction-using-msmt-csd \
     prep_example_data.sh /input
     ```
 
@@ -101,7 +101,7 @@ mkdir input/ output/
     docker run -it --rm \
     -v /mnt/DICOM:/DICOM \
     -v $(pwd)/input:/input \
-    martahedl/sc-construction-using-msmt-csd \
+    martah/sc-construction-using-msmt-csd \
     mrconvert /DICOM/T1w_MPRAGE/ /input/T1w.mif
     ```
 
@@ -112,7 +112,7 @@ docker run -it --rm \
 -v $(pwd)/input:/input \
 -v $(pwd)/output:/output \
 -v ${FS_LICENSE}:/opt/freesurfer/license.txt \
-martahedl/sc-construction-using-msmt-csd \
+martah/sc-construction-using-msmt-csd \
 run_protocol.sh /input /output
 ```
 
@@ -132,7 +132,7 @@ docker run --rm -it \
 -e DISPLAY=$DISPLAY \
 -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
 -u $UID \
-martahedl/sc-construction-using-msmt-csd mrview; \
+martah/sc-construction-using-msmt-csd mrview; \
 xhost -local:root
 ```
 
