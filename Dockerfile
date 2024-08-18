@@ -89,15 +89,10 @@ RUN wget https://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py \
 # Builder that downloads the example data
 FROM base-builder AS data-downloader
 WORKDIR /data
-#RUN curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66a8d1299a807f4eea9b4025/?zip= --output dicoms.zip \
-#    && unzip dicoms.zip -d dicoms \
-#    && rm dicoms.zip \
-#    && curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66a8d136a93f4dc90451a344/?zip= --output derivatives.zip \
-#    && unzip derivatives.zip -d derivatives \
-#    && rm derivatives.zip
-COPY dicoms.zip derivatives.zip ./
-RUN unzip dicoms.zip -d dicoms \
+RUN curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66a8d1299a807f4eea9b4025/?zip= --output dicoms.zip \
+    && unzip dicoms.zip -d dicoms \
     && rm dicoms.zip \
+    && curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66a8d136a93f4dc90451a344/?zip= --output derivatives.zip \
     && unzip derivatives.zip -d derivatives \
     && rm derivatives.zip
 
