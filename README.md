@@ -25,11 +25,31 @@ Execution of the protocol using this Docker image is performed in two explicit s
 3.  ACPCDetect:
     Download ACPCDetect tool version 2.1 manually from NITRC:
     https://www.nitrc.org/forum/forum.php?forum_id=8519
-    For building the Docker image manually from the corresponding `Dockerfile`,
+    For building the Docker image manually from the corresponding `Dockerfile` (see below),
     the downlaoded .zip file must be placed in the same directory as the `Dockerfile`.
     If obtaining the Docker image from some other source (eg. DockerHub),
     it is nevertheless requested to contribute to having the download statistics of that software
     more faithfull track its usage.
+
+### Obtaining the image
+
+The Docker image to execute the container can be obtained in one of two ways:
+
+1.  Build the image locally from the `Dockerfile` recipe.
+
+    Execute the following command from the root directory of the cloned repository
+    (having previously downloaded the ACPCDetect dependency; see above):
+    ```bash
+    docker build . -t martahedl/sc-construction-using-msmt-csd
+    ```
+
+2.  Pull the image from DockerHub:
+
+    ```bash
+    docker pull martehedl/sc-construction-using-msmt-csd
+    ```
+
+    **NOTE**: Not yet available at time of writing.
 
 ### Preparing data for the protocol
 
@@ -48,7 +68,7 @@ mkdir input/ output/
     ```bash
     docker run -it --rm \
     -v $(pwd)/input:/input \
-    SC-construction-using-MSMT-CSD \
+    martahedl/sc-construction-using-msmt-csd \
     prep_example_data.sh /input
     ```
 
@@ -78,7 +98,7 @@ mkdir input/ output/
     docker run -it --rm \
     -v /mnt/DICOM:/DICOM \
     -v $(pwd)/input:/input \
-    SC-construction-using-MSMT-CSD \
+    martahedl/sc-construction-using-msmt-csd \
     mrconvert /DICOM/T1w_MPRAGE/ /input/T1w.mif
     ```
 
@@ -89,7 +109,7 @@ docker run -it --rm \
 -v $(pwd)/input:/input \
 -v $(pwd)/output:/output \
 -v ${FS_LICENSE}:/opt/freesurfer/license.txt \
-SC-construction-using-MSMT-CSD \
+martahedl/sc-construction-using-msmt-csd \
 run_protocol.sh /input /output
 ```
 
@@ -109,7 +129,7 @@ docker run --rm -it \
 -e DISPLAY=$DISPLAY \
 -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
 -u $UID \
-SC-construction-using-MSMT-CSD mrview; \
+martahedl/sc-construction-using-msmt-csd mrview; \
 xhost -local:root
 ```
 
