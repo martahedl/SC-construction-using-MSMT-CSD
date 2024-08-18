@@ -21,7 +21,7 @@ RUN apt-get -qq update \
         libtiff5-dev \
         qtbase5-dev \
         qt5-qmake \
-        python3 \
+        python3.10 \
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 # Clone, build, and install MRtrix3.
@@ -77,7 +77,7 @@ RUN apt-get -qq update \
         libxrandr2 \
         libxrender1 \
         libxt6 \
-        python3 \
+        python3.10 \
         sudo \
         wget \
     && rm -rf /var/lib/apt/lists/*
@@ -120,8 +120,8 @@ RUN apt-get -qq update \
         libtiff5-dev \
         qtbase5-dev \
         pigz \
-        python3 \
-        python3-distutils \
+        python3.10 \
+        python3.10-distutils \
         tcsh \
     && rm -rf /var/lib/apt/lists/*
 
