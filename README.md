@@ -46,7 +46,7 @@ The Docker image to execute the container can be obtained in one of two ways:
 2.  Pull the image from DockerHub:
 
     ```bash
-    docker pull martehedl/sc-construction-using-msmt-csd
+    docker pull martahedl/sc-construction-using-msmt-csd
     ```
 
     **NOTE**: Not yet available at time of writing.
