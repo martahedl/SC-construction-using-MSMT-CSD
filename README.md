@@ -23,13 +23,16 @@ Execution of the protocol using this Docker image is performed in two explicit s
     https://fsl.fmrib.ox.ac.uk/fsldownloads_registration/
 
 3.  ACPCDetect:
-    Download ACPCDetect tool version 2.1 manually from NITRC:
-    https://www.nitrc.org/forum/forum.php?forum_id=8519
+    Download ACPCDetect tool version 2.2 for Linux manually from NITRC:
+    https://www.nitrc.org/frs/?group_id=90
     For building the Docker image manually from the corresponding `Dockerfile` (see below),
     the downlaoded .zip file must be placed in the same directory as the `Dockerfile`.
+    Note that even if your host system is running MacOSX,
+    it is the Linux version of the tool that must be obtained,
+    as that is the operating system within the container environment.
     If obtaining the Docker image from some other source (eg. DockerHub),
     it is nevertheless requested to contribute to having the download statistics of that software
-    more faithfull track its usage.
+    more faithfully track its usage.
 
 ### Obtaining the image
 

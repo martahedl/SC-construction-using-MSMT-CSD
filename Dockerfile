@@ -35,8 +35,9 @@ RUN git clone -b ${MRTRIX3_GIT_COMMITISH} --depth 1 https://github.com/MRtrix3/m
 # Install ART ACPCdetect.
 FROM base-builder AS acpcdetect-installer
 WORKDIR /opt/art
-COPY acpcdetect_V2.1_LinuxCentOS6.7.tar.gz /opt/art/acpcdetect_V2.1_LinuxCentOS6.7.tar.gz
-RUN tar -xf acpcdetect_V2.1_LinuxCentOS6.7.tar.gz
+COPY acpcdetect_V2.2_Linux_x86_64_Ubuntu_22.04.01.tar.gz /opt/art/acpcdetect_V2.2_Linux_x86_64_Ubuntu_22.04.01.tar.gz
+RUN tar -xf acpcdetect_V2.2_Linux_x86_64_Ubuntu_22.04.01.tar.gz \
+    && rm acpcdetect_V2.2_Linux_x86_64_Ubuntu_22.04.01.tar.gz
 
 # Install ANTs
 FROM base-builder AS ants-installer
