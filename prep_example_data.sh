@@ -9,7 +9,7 @@
 #   on one's own data
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: example_prepdata.sh <directory>"
+    echo "Usage: prep_example_data.sh <directory>"
     exit 1
 fi
 
