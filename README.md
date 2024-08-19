@@ -43,7 +43,7 @@ The Docker image to execute the container can be obtained in one of two ways:
     Execute the following command from the root directory of the cloned repository
     (having previously downloaded the ACPCDetect dependency; see above):
     ```bash
-    docker build . -t martah/sc-construction-using-msmt-csd
+    DOCKER_BUILDKIT=1 docker build . -t martah/sc-construction-using-msmt-csd
     ```
 
 2.  Pull the image from DockerHub:
