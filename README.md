@@ -1,11 +1,18 @@
 ## Usage
 
-Execution of the protocol using this Docker image is performed in two explicit stages:
+Execution of the protocol is performed in multiple explicit stages:
 
 1.  Conversion of source DICOM data into MRtrix format images with standard naming
     in preparation of execution of the protocol.
 
-2.  Execution of the protocol against those data.
+2.  Execution of the protocol against those data to produce the protocol derivatives.
+
+3.  (*optional*) Execution of commands to generate supplementary material.
+
+This Docker container contains three scripts corresponding to these stages.
+These can be executed against either the exmple data provided with the protocol
+(which are embedded within the Docker image),
+or run for one's own data with no or minimal modification.
 
 ### Prerequisites
 
@@ -52,69 +59,123 @@ The Docker image to execute the container can be obtained in one of two ways:
     docker pull martah/sc-construction-using-msmt-csd
     ```
 
-    **NOTE**: Not yet available at time of writing.
+### Executing the protocol
 
-### Preparing data for the protocol
+#### Part 1: Conversion of DICOM data
 
-Create two directores on your host system;
-one will be populated with the contents of the converted DICOM data,
-the other will be populated with the derivatives of the protocol; eg.:
+For the example data provided with the protocol,
+the DICOM data have already been converted to the MRtrix `.mif` format
+and stored within the DOcker image,
+such that the protocol can be executed directly against those data.
+We nevertheless provide the requisite code
+to reproduce that conversion for those example data:
 
 ```bash
-mkdir input/ output/
+mkdir raw
+docker run -it --rm \
+-v $(pwd)/raw:/raw \
+martah/sc-construction-using-msmt-csd \
+convert_example_dicoms.sh /raw
 ```
 
-1.  If reproducing the protocol derivatives using the example data,
-    the Docker image contains both the original DICOM data
-    and a script that converts those DICOM data into the expected format:
+If one wishes to run the protocol against their own data,
+you will need to yourself create the requisite files within a directory:
 
-    ```bash
-    docker run -it --rm \
-    -v $(pwd)/input:/input \
-    martah/sc-construction-using-msmt-csd \
-    prep_example_data.sh /input
-    ```
+```
+raw/
+    dwi.mif
+    b0_pa.mif
+    T1w.mif
+```
 
-2.  If attempting to execute the protocol against your own data,
-    you will need to yourself create the requisite files within that directory:
+(Note that the protocol script expects a diffusion acquisition
+possessing a particular strategy for multi-shell acquisition
+and variation in phase encoding for susceptibility field estimation;
+acquisitions following some other strategy
+will likely necessitate modification to the protocol command invovations)
 
-    -   `dwi.mif`
-    -   `b0_pa.mif`
-    -   `T1w.mif`
-
-    (Note that the protocol script expects a diffusion acquisition
-    possessing a particular strategy for multi-shell acquisition
-    and variation in phase encoding for susceptibility field estimation;
-    acquisitions following some other strategy
-    will likely necessitate modification to the protocol command invovations)
-
-    If you have *MRtrix3* installed on your host system,
-    this can be done directly using the `mrconvert` command.
-    Alternatively, the version of *MRtrix3* `mrconvert` that is installed within the DOcker container
-    can instead be used to do this conversion.
-    The latter however necessitates the explicit binding of all relevant host system directories.
-    For instance, if one's DICOM data were to reside in directory "`/mnt/DICOM/`",
-    and it contained a DICOM series in a directory called "`T1w_MPRAGE/"
-    the conversion would look something like the following:
-
-    ```bash
-    docker run -it --rm \
-    -v /mnt/DICOM:/DICOM \
-    -v $(pwd)/input:/input \
-    martah/sc-construction-using-msmt-csd \
-    mrconvert /DICOM/T1w_MPRAGE/ /input/T1w.mif
-    ```
-
-### Executing the protocol
+If you have *MRtrix3* installed on your host system,
+this can be done directly using the `mrconvert` command.
+Alternatively, the version of *MRtrix3* `mrconvert`
+that is installed within the Docker container
+can instead be used to do this conversion.
+The latter however necessitates the explicit binding of all relevant host system directories.
+For instance, if one's DICOM data were to reside in directory "`/mnt/DICOM/`",
+and it contained a DICOM series in a directory called "`T1w_MPRAGE/`"
+the conversion would look something like the following:
 
 ```bash
 docker run -it --rm \
--v $(pwd)/input:/input \
--v $(pwd)/output:/output \
+-v /mnt/DICOM:/DICOM \
+-v $(pwd)/raw:/raw \
+martah/sc-construction-using-msmt-csd \
+mrconvert /DICOM/T1w_MPRAGE/ /raw/T1w.mif
+```
+
+#### Stage 2: Execution of the protocol
+
+If reproducing execution of the protocol
+utilising the converted DICOM data stored within the Docker image:
+
+```bash
+mkdir derivatives
+docker run -it --rm \
+-v $(pwd)/derivatives:/derivatives \
 -v ${FS_LICENSE}:/opt/freesurfer/license.txt \
 martah/sc-construction-using-msmt-csd \
-run_protocol.sh /input /output
+run_protocol.sh /data/raw /derivatives
 ```
+
+Note that path "`/data/raw`" refers to the location within the Docker image
+where the converted DICOM data have been preloaded.
+
+If instead executing the protocol
+either against the reproduced DICOM conversion as per stage 1 above
+or against one's own data:
+
+```bash
+mkdir derivatives
+docker run -it --rm \
+-v $(pwd)/raw:/raw \
+-v $(pwd)/derivatives:/derivatives \
+-v ${FS_LICENSE}:/opt/freesurfer/license.txt \
+martah/sc-construction-using-msmt-csd \
+run_protocol.sh /raw /derivatives
+```
+
+Note that directory "`raw/`",
+residing in the current working directory on the host system
+and populated with the results of conversion of DICOM data,
+is mounted to location "`/raw`" within the container,
+and it is this path that is passed as input to the "`run_protocol.sh`" script.
+
+If you see the warning:
+```
+docker: invalid spec: :/opt/freesurfer/license.txt: empty section between colons.
+```
+
+, this indicates that environment variable `FS_LICENSE` has not been set;
+this must be configured according to the prerequsites listed above.
+
+#### Stage 3: Generation of supplementary material
+
+If you wish to also generate the content that is presented in the Supplementary Material:
+
+```bash
+mkdir supplementary/
+docker run -it --rm \
+-v $(pwd)/raw:/raw \
+-v $(pwd)/derivatives:/derivatives \
+-v $(pwd)/supplementary:/supplementary \
+martah/sc-construction-using-msmt-csd \
+gen_supplementary.sh /raw /derivatives /supplementary
+```
+
+Note that in order to run the "`gen_supplementary.sh`" script,
+it is necessary to have executed the protocol locally (stage 2 above),
+on either the exemplar data or on one's own data.
+Attempting to run this script utilising the downlaoded exemplar derivative data
+will result in failure due to absence of the dense whole-brain tractogram data.
 
 ### Visualisation
 
@@ -137,9 +198,10 @@ xhost -local:root
 ```
 
 For the example data provided with the protocol,
-both the original DICOM data and all derivative data
+the original DICOM data, converted DICOMs, derivatives,
+and images generated in supplementary material
 are provided within the image at filesystem path `/data`.
 If a user wishes to use the `mrview` through the Docker container
 to visualise their own data or the results of processing thereof,
 it will be necessary to mount the corresponding filesystem locations,
-just as is done for the data preparation & execution examples above.
+just as is done for the various examples above.

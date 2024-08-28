@@ -32,6 +32,13 @@ RUN git clone -b ${MRTRIX3_GIT_COMMITISH} --depth 1 https://github.com/MRtrix3/m
     && NUMBER_OF_PROCESSORS=$MAKE_JOBS python3 ./build $MRTRIX3_BUILD_FLAGS \
     && rm -rf testing/ tmp/
 
+# Download the AAL2 atlas parcellation
+#   (for supplementary material)
+FROM base-builder AS aal-downloader
+WORKDIR /opt/aal
+RUN wget -qO- http://www.gin.cnrs.fr/wp-content/uploads/aal2_for_SPM12.tar.gz \
+    | tar xz --strip-components 1
+
 # Install ART ACPCdetect.
 FROM base-builder AS acpcdetect-installer
 WORKDIR /opt/art
@@ -92,9 +99,15 @@ WORKDIR /data
 RUN curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66a8d1299a807f4eea9b4025/?zip= --output dicoms.zip \
     && unzip dicoms.zip -d dicoms \
     && rm dicoms.zip \
+    && curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66ce817f8f65e60a7e1808ae/?zip= --output raw.zip \
+    && unzip raw.zip -d raw \
+    && rm raw.zip \
     && curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66a8d136a93f4dc90451a344/?zip= --output derivatives.zip \
     && unzip derivatives.zip -d derivatives \
-    && rm derivatives.zip
+    && rm derivatives.zip \
+    && curl https://files.osf.io/v1/resources/tm5x8/providers/osfstorage/66cd6c147dd18340778c99ad/?zip= --output supplementary.zip \
+    && unzip supplementary.zip -d supplementary \
+    && rm supplementary.zip
 
 
 
@@ -122,31 +135,34 @@ RUN apt-get -qq update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=mrtrix3-builder /opt/mrtrix3 /opt/mrtrix3
+COPY --from=aal-downloader /opt/aal /opt/aal
 COPY --from=acpcdetect-installer /opt/art /opt/art
 COPY --from=ants-installer /opt/ants /opt/ants
 COPY --from=fsl-installer /opt/fsl /opt/fsl
 COPY --from=freesurfer-installer /opt/freesurfer /opt/freesurfer
 COPY --from=data-downloader /data /data
 
-COPY prep_example_data.sh /
+COPY convert_example_dicoms.sh /
 COPY run_protocol.sh /
+COPY gen_supplementary.sh /
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 WORKDIR /
 
-ENV ANTSPATH=/opt/ants/bin \
+ENV AALPATH=/opt/aal \
+    ANTSPATH=/opt/ants/bin \
     ARTHOME=/opt/art \
     FIX_VERTEX_AREA= \
     FMRI_ANALYSIS_DIR=/opt/freesurfer/fsfast \
     FREESURFER=/opt/freesurfer \
     FREESURFER_HOME=/opt/freesurfer \
     FSFAST_HOME=/opt/freesurfer/fsfast \
-    FSF_OUTPUT_FORMAT=.nii \
+    FSF_OUTPUT_FORMAT=.nii.gz \
     FSLDIR=/opt/fsl \
     FSLGECUDAQ=cuda.q \
     FSLMULTIFILEQUIT=TRUE \
-    FSLOUTPUTTYPE=NIFTI \
+    FSLOUTPUTTYPE=NIFTI_GZ \
     FSLTCLSH=/opt/fsl/bin/fsltclsh \
     FSLWISH=/opt/fsl/bin/fslwish \
     FSL_BIN=/opt/fsl/bin \
@@ -155,17 +171,17 @@ ENV ANTSPATH=/opt/ants/bin \
     FSL_SKIP_GLOBAL=0 \
     FS_OVERRIDE=0 \
     FUNCTIONALS_DIR=/opt/freesurfer/sessions \
-    LOCAL_DIR=/opt/freesurfer/local \
     LD_LIBRARY_PATH="/opt/ants/lib" \
+    LOCAL_DIR=/opt/freesurfer/local \
     MINC_BIN_DIR=/opt/freesurfer/mni/bin \
     MINC_LIB_DIR=/opt/freesurfer/mni/lib \
     MNI_DATAPATH=/opt/freesurfer/mni/data \
     MNI_DIR=/opt/freesurfer/mni \
     MNI_PERL5LIB=/opt/freesurfer/mni/share/perl5 \
+    MRTRIXDIR=/opt/mrtrix3 \
     OS=Linux \
     PATH="/opt/mrtrix3/bin:/opt/ants/bin:/opt/art/bin:/opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/opt/freesurfer/mni/bin:/opt/freesurfer/tktools:/opt/fsl/share/fsl/bin:$PATH" \
     PERL5LIB=/opt/freesurfer/mni/share/perl5 \
     SUBJECTS_DIR=/opt/freesurfer/subjects
 
 ENTRYPOINT ["/bin/bash"]
-

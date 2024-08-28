@@ -3,22 +3,31 @@
 # magnetic resonance imaging" BY TAHEDL, M., TOURNIER, J.-D., AND SMITH, R.E., 2024
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: run_protocol.sh <data_dir> <output_dir>"
+    echo "Usage: run_protocol.sh <raw_dir> <derivatives_dir>"
     exit 1
 fi
 set -e
 
+RAWDIR=$1
+DERIVDIR=$2
+
 # It is assumed that within the input directory,
 #   there will be three image files:
-# data_dir/
-#     ├── dwi.mif
-#     ├── b0_pa.mif
-#     └── T1w.mif
+# raw/
+# ├── dwi.mif
+# ├── b0_pa.mif
+# └── T1w.mif
 # If an individual's data conform to this style of acquisition,
 #   then they may be able to store their data according to this naming convention,
 #   and execute the protocol on their data without modification.
 # The output directory should be empty at commencement;
 #   conflicts between existing files and new outputs are not handled.
+if [ ! -f ${RAWDIR}/dwi.mif -o \
+     ! -f ${RAWDIR}/b0_pa.mif -o \
+     ! -f ${RAWDIR}/T1w.mif ]; then
+    echo "Requisite raw input data not found at location \"${RAWDIR}\""
+    exit 1
+fi
 
 ###############################################################
 # 2. DEFINE ENVIRONMENT VARIABLES
@@ -26,8 +35,6 @@ set -e
 # ACCESS THE INPUT DATA CONVENTIENTLY
 # ALSO CREATE A SUBJECT-ID FOR FREESURFER PROCESSING, E.G. "subject_00"
 
-DATADIR=$1
-OUTDIR=$2
 SUBJECTID="subject_00"
 #source ${FREESURFER_HOME}/SetUpFreeSurfer.sh
 #source ${FSLDIR}/etc/fslconf/fsl.sh
@@ -36,27 +43,27 @@ SUBJECTID="subject_00"
 # 3. CONVERT T1W IMAGE TO NIFTI FORMAT
 ###############################################################
 
-mrconvert ${DATADIR}/T1w.mif ${OUTDIR}/T1w.nii
+mrconvert ${RAWDIR}/T1w.mif ${DERIVDIR}/T1w.nii
 
 ###############################################################
 # 4. RUN FREESURFER
 ###############################################################
 
-recon-all -s ${SUBJECTID} -i ${OUTDIR}/T1w.nii -all -openmp 4
-cp -r ${SUBJECTS_DIR}/${SUBJECTID} ${OUTDIR}/freesurfer
+recon-all -s ${SUBJECTID} -i ${DERIVDIR}/T1w.nii -all -openmp 4
+cp -r ${SUBJECTS_DIR}/${SUBJECTID} ${DERIVDIR}/freesurfer
 
 ###############################################################
 # 5. PREPROCESSING I: DENOISE
 ###############################################################
 
-dwidenoise ${DATADIR}/dwi.mif ${OUTDIR}/dwi_den.mif \
--noise ${OUTDIR}/noise.mif
+dwidenoise ${RAWDIR}/dwi.mif ${DERIVDIR}/dwi_den.mif \
+-noise ${DERIVDIR}/noise.mif
 
 ###############################################################
 # 6. PREPROCESSING II: GIBB'S UNRINGING
 ###############################################################
 
-mrdegibbs ${OUTDIR}/dwi_den.mif ${OUTDIR}/dwi_den_unr.mif
+mrdegibbs ${DERIVDIR}/dwi_den.mif ${DERIVDIR}/dwi_den_unr.mif
 
 
 ###############################################################
@@ -64,22 +71,22 @@ mrdegibbs ${OUTDIR}/dwi_den.mif ${OUTDIR}/dwi_den_unr.mif
 ###############################################################
 
 # Produce the image data to be used for susceptibility field estimation
-dwiextract ${OUTDIR}/dwi_den_unr.mif -bzero - | \
+dwiextract ${DERIVDIR}/dwi_den_unr.mif -bzero - | \
 mrconvert - -coord 3 0 - | \
-mrcat - ${DATADIR}/b0_pa.mif -axis 3 ${OUTDIR}/b0s_paired.mif
+mrcat - ${DERIVDIR}/b0_pa.mif -axis 3 ${DERIVDIR}/b0s_paired.mif
 
 # Perform image geometric distortion corrections making use of these data
-dwifslpreproc ${OUTDIR}/dwi_den_unr.mif ${OUTDIR}/dwi_den_unr_preproc.mif \
+dwifslpreproc ${DERIVDIR}/dwi_den_unr.mif ${DERIVDIR}/dwi_den_unr_preproc.mif \
 -pe_dir AP -rpe_pair \
--se_epi ${OUTDIR}/b0s_paired.mif \
+-se_epi ${DERIVDIR}/b0s_paired.mif \
 -eddy_options " --repol"
 
 ###############################################################
 # 8. PREPROCESSING IV: BIAS FIELD CORRECTION
 ###############################################################
 
-dwibiascorrect ants ${OUTDIR}/dwi_den_unr_preproc.mif ${OUTDIR}/dwi_den_unr_preproc_unb.mif \
--bias ${OUTDIR}/bias.mif
+dwibiascorrect ants ${DERIVDIR}/dwi_den_unr_preproc.mif ${DERIVDIR}/dwi_den_unr_preproc_unb.mif \
+-bias ${DERIVDIR}/bias.mif
 
 ###############################################################
 # 9. PREPROCESSING V: COREGISTRATION
@@ -87,60 +94,60 @@ dwibiascorrect ants ${OUTDIR}/dwi_den_unr_preproc.mif ${OUTDIR}/dwi_den_unr_prep
 
 # Extract b=0 volumes and calculate the mean.
 # Export to NIFTI format for compatibility with FSL.
-dwiextract ${OUTDIR}/dwi_den_unr_preproc_unb.mif - -bzero | \
-mrmath - mean ${OUTDIR}/mean_b0_preproc.nii -axis 3
+dwiextract ${DERIVDIR}/dwi_den_unr_preproc_unb.mif - -bzero | \
+mrmath - mean ${DERIVDIR}/mean_b0_preproc.nii -axis 3
 
 # Correct for bias field in T1w image:
-N4BiasFieldCorrection -d 3 -i ${OUTDIR}/T1w.nii -s 2 -o ${OUTDIR}/T1w_bc.nii
+N4BiasFieldCorrection -d 3 -i ${DERIVDIR}/T1w.nii -s 2 -o ${DERIVDIR}/T1w_bc.nii
 
 # Perform linear registration with 6 degrees of freedom:
-flirt -in ${OUTDIR}/mean_b0_preproc.nii -ref ${OUTDIR}/T1w_bc.nii \
+flirt -in ${DERIVDIR}/mean_b0_preproc.nii -ref ${DERIVDIR}/T1w_bc.nii \
 -dof 6 -cost normmi \
--omat ${OUTDIR}/diff2struct_fsl.mat
+-omat ${DERIVDIR}/diff2struct_fsl.mat
 
 # Convert the resulting linear transformation matrix from FSL to MRtrix format:
-transformconvert ${OUTDIR}/diff2struct_fsl.mat ${OUTDIR}/mean_b0_preproc.nii \
-${OUTDIR}/T1w_bc.nii flirt_import ${OUTDIR}/diff2struct_mrtrix.txt
+transformconvert ${DERIVDIR}/diff2struct_fsl.mat ${DERIVDIR}/mean_b0_preproc.nii \
+${DERIVDIR}/T1w_bc.nii flirt_import ${DERIVDIR}/diff2struct_mrtrix.txt
 
 # Apply linear transformation to header of diffusion-weighted image:
-mrtransform ${OUTDIR}/dwi_den_unr_preproc_unb.mif ${OUTDIR}/dwi_den_unr_preproc_unb_coreg.mif \
--linear ${OUTDIR}/diff2struct_mrtrix.txt \
+mrtransform ${DERIVDIR}/dwi_den_unr_preproc_unb.mif ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif \
+-linear ${DERIVDIR}/diff2struct_mrtrix.txt \
 
 ###############################################################
 # 10. PREPROCESSING VI: BRAIN MASK ESTIMATION
 ###############################################################
 
-dwi2mask ${OUTDIR}/dwi_den_unr_preproc_unb_coreg.mif ${OUTDIR}/dwi_mask.mif
+dwi2mask ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif ${DERIVDIR}/dwi_mask.mif
 
 ###############################################################
 # 11. LOCAL FOD ESTIMATION I: RESPONSE FUNCTION ESTIMATION
 ###############################################################
 
-dwi2response dhollander ${OUTDIR}/dwi_den_unr_preproc_unb_coreg.mif \
-${OUTDIR}/wm.txt ${OUTDIR}/gm.txt ${OUTDIR}/csf.txt \
--voxels ${OUTDIR}/voxels.mif
+dwi2response dhollander ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif \
+${DERIVDIR}/wm.txt ${DERIVDIR}/gm.txt ${DERIVDIR}/csf.txt \
+-voxels ${DERIVDIR}/voxels.mif
 
 ###############################################################
 # 12. LOCAL FOD ESTIMATION II: ODF ESTIMATION
 ###############################################################
 
-dwi2fod msmt_csd ${OUTDIR}/dwi_den_unr_preproc_unb_coreg.mif \
--mask ${OUTDIR}/dwi_mask.mif \
-${OUTDIR}/wm.txt ${OUTDIR}/wmfod.mif \
-${OUTDIR}/gm.txt ${OUTDIR}/gm.mif \
-${OUTDIR}/csf.txt ${OUTDIR}/csf.mif
+dwi2fod msmt_csd ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif \
+-mask ${DERIVDIR}/dwi_mask.mif \
+${DERIVDIR}/wm.txt ${DERIVDIR}/wmfod.mif \
+${DERIVDIR}/gm.txt ${DERIVDIR}/gm.mif \
+${DERIVDIR}/csf.txt ${DERIVDIR}/csf.mif
 
 ###############################################################
 # 13. LOCAL FOD ESTIMATION III: NORMALIZATION
 ###############################################################
 
-mtnormalise -mask ${OUTDIR}/dwi_mask.mif \
-${OUTDIR}/wmfod.mif ${OUTDIR}/wmfod_norm.mif \
-${OUTDIR}/gm.mif ${OUTDIR}/gm_norm.mif \
-${OUTDIR}/csf.mif ${OUTDIR}/csf_norm.mif \
--check_factors ${OUTDIR}/check_factors.txt \
--check_norm ${OUTDIR}/check_norm.mif \
--check_mask ${OUTDIR}/check_mask.mif
+mtnormalise -mask ${DERIVDIR}/dwi_mask.mif \
+${DERIVDIR}/wmfod.mif ${DERIVDIR}/wmfod_norm.mif \
+${DERIVDIR}/gm.mif ${DERIVDIR}/gm_norm.mif \
+${DERIVDIR}/csf.mif ${DERIVDIR}/csf_norm.mif \
+-check_factors ${DERIVDIR}/check_factors.txt \
+-check_norm ${DERIVDIR}/check_norm.mif \
+-check_mask ${DERIVDIR}/check_mask.mif
 
 ###############################################################
 # 14. CREATE WHOLE-BRAIN TRACTOGRAM I: ACT SEGMENTATION
@@ -151,37 +158,38 @@ ${OUTDIR}/csf.mif ${OUTDIR}/csf_norm.mif \
 #   that has already been duplicated in the output directory
 #   is used here as it simplifies resumption of partially
 #   completed executions
-5ttgen hsvs ${OUTDIR}/freesurfer ${OUTDIR}/5tt.mif
+5ttgen hsvs ${DERIVDIR}/freesurfer ${DERIVDIR}/5tt.mif
 
 ###############################################################
 # 15. CREATE WHOLE-BRAIN TRACTOGRAM II: STREAMLINE GENERATION
 ###############################################################
 
-tckgen ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/tracks_10m.tck \
+tckgen ${DERIVDIR}/wmfod_norm.mif ${DERIVDIR}/tracks_10m.tck \
 -algorithm ifod2 -select 10m \
--act ${OUTDIR}/5tt.mif -backtrack \
--seed_dynamic ${OUTDIR}/wmfod_norm.mif
+-act ${DERIVDIR}/5tt.mif -backtrack \
+-seed_dynamic ${DERIVDIR}/wmfod_norm.mif
 
 ###############################################################
 # 16. TRACTOGRAM OPTIMIZATION: SIFT2 FILTERING
 ###############################################################
 
-tcksift2 ${OUTDIR}/tracks_10m.tck ${OUTDIR}/wmfod_norm.mif ${OUTDIR}/sift2_weights.txt \
--act ${OUTDIR}/5tt.mif \
--out_mu ${OUTDIR}/sift2_mu.txt
+tcksift2 ${DERIVDIR}/tracks_10m.tck ${DERIVDIR}/wmfod_norm.mif ${DERIVDIR}/sift2_weights.txt \
+-act ${DERIVDIR}/5tt.mif \
+-out_mu ${DERIVDIR}/sift2_mu.txt
 
 ###############################################################
 # 17. SC MATRIX GENERATION I: CONVERT PARCELLATION IMAGE
 ###############################################################
 
-labelconvert ${OUTDIR}/freesurfer/mri/aparc+aseg.mgz \
+labelconvert ${DERIVDIR}/freesurfer/mri/aparc+aseg.mgz \
 ${FREESURFER_HOME}/FreeSurferColorLUT.txt \
 /opt/mrtrix3/share/mrtrix3/labelconvert/fs_default.txt \
-${OUTDIR}/DK_parcels.mif
+${DERIVDIR}/DK_parcels.mif
 
 ###############################################################
 # 18. SC MATRIX GENERATION II: CREATE MATRIX
 ###############################################################
-tck2connectome ${OUTDIR}/tracks_10m.tck ${OUTDIR}/DK_parcels.mif ${OUTDIR}/dk.csv \
+tck2connectome ${DERIVDIR}/tracks_10m.tck ${DERIVDIR}/DK_parcels.mif ${DERIVDIR}/dk.csv \
 -symmetric -zero_diagonal \
--tck_weights_in ${OUTDIR}/sift2_weights.txt
+-tck_weights_in ${DERIVDIR}/sift2_weights.txt \
+-out_assignments ${DERIVDIR}/dk_assignments.txt
