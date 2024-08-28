@@ -65,6 +65,7 @@ dwidenoise ${RAWDIR}/dwi.mif ${DERIVDIR}/dwi_den.mif \
 
 mrdegibbs ${DERIVDIR}/dwi_den.mif ${DERIVDIR}/dwi_den_unr.mif
 
+mrdegibbs ${RAWDIR}/b0_pa.mif ${DERIVDIR}/b0_pa_unr.mif
 
 ###############################################################
 # 7. PREPROCESSING III: MOTION/DISTORTION CORRECTION
@@ -73,7 +74,7 @@ mrdegibbs ${DERIVDIR}/dwi_den.mif ${DERIVDIR}/dwi_den_unr.mif
 # Produce the image data to be used for susceptibility field estimation
 dwiextract ${DERIVDIR}/dwi_den_unr.mif -bzero - | \
 mrconvert - -coord 3 0 - | \
-mrcat - ${DERIVDIR}/b0_pa.mif -axis 3 ${DERIVDIR}/b0s_paired.mif
+mrcat - ${DERIVDIR}/b0_pa_unr.mif -axis 3 ${DERIVDIR}/b0s_paired.mif
 
 # Perform image geometric distortion corrections making use of these data
 dwifslpreproc ${DERIVDIR}/dwi_den_unr.mif ${DERIVDIR}/dwi_den_unr_preproc.mif \
@@ -85,7 +86,7 @@ dwifslpreproc ${DERIVDIR}/dwi_den_unr.mif ${DERIVDIR}/dwi_den_unr_preproc.mif \
 # 8. PREPROCESSING IV: BIAS FIELD CORRECTION
 ###############################################################
 
-dwibiascorrect ants ${DERIVDIR}/dwi_den_unr_preproc.mif ${DERIVDIR}/dwi_den_unr_preproc_unb.mif \
+dwibiascorrect ants ${DERIVDIR}/dwi_den_unr_preproc.mif ${DERIVDIR}/dwi_den_unr_preproc_bc.mif \
 -bias ${DERIVDIR}/bias.mif
 
 ###############################################################
@@ -94,7 +95,7 @@ dwibiascorrect ants ${DERIVDIR}/dwi_den_unr_preproc.mif ${DERIVDIR}/dwi_den_unr_
 
 # Extract b=0 volumes and calculate the mean.
 # Export to NIFTI format for compatibility with FSL.
-dwiextract ${DERIVDIR}/dwi_den_unr_preproc_unb.mif - -bzero | \
+dwiextract ${DERIVDIR}/dwi_den_unr_preproc_bc.mif - -bzero | \
 mrmath - mean ${DERIVDIR}/mean_b0_preproc.nii -axis 3
 
 # Correct for bias field in T1w image:
@@ -110,20 +111,20 @@ transformconvert ${DERIVDIR}/diff2struct_fsl.mat ${DERIVDIR}/mean_b0_preproc.nii
 ${DERIVDIR}/T1w_bc.nii flirt_import ${DERIVDIR}/diff2struct_mrtrix.txt
 
 # Apply linear transformation to header of diffusion-weighted image:
-mrtransform ${DERIVDIR}/dwi_den_unr_preproc_unb.mif ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif \
+mrtransform ${DERIVDIR}/dwi_den_unr_preproc_bc.mif ${DERIVDIR}/dwi_den_unr_preproc_bc_coreg.mif \
 -linear ${DERIVDIR}/diff2struct_mrtrix.txt \
 
 ###############################################################
 # 10. PREPROCESSING VI: BRAIN MASK ESTIMATION
 ###############################################################
 
-dwi2mask ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif ${DERIVDIR}/dwi_mask.mif
+dwi2mask ${DERIVDIR}/dwi_den_unr_preproc_bc_coreg.mif ${DERIVDIR}/dwi_mask.mif
 
 ###############################################################
 # 11. LOCAL FOD ESTIMATION I: RESPONSE FUNCTION ESTIMATION
 ###############################################################
 
-dwi2response dhollander ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif \
+dwi2response dhollander ${DERIVDIR}/dwi_den_unr_preproc_bc_coreg.mif \
 ${DERIVDIR}/wm.txt ${DERIVDIR}/gm.txt ${DERIVDIR}/csf.txt \
 -voxels ${DERIVDIR}/voxels.mif
 
@@ -131,7 +132,7 @@ ${DERIVDIR}/wm.txt ${DERIVDIR}/gm.txt ${DERIVDIR}/csf.txt \
 # 12. LOCAL FOD ESTIMATION II: ODF ESTIMATION
 ###############################################################
 
-dwi2fod msmt_csd ${DERIVDIR}/dwi_den_unr_preproc_unb_coreg.mif \
+dwi2fod msmt_csd ${DERIVDIR}/dwi_den_unr_preproc_bc_coreg.mif \
 -mask ${DERIVDIR}/dwi_mask.mif \
 ${DERIVDIR}/wm.txt ${DERIVDIR}/wmfod.mif \
 ${DERIVDIR}/gm.txt ${DERIVDIR}/gm.mif \
