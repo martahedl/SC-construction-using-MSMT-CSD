@@ -99,7 +99,7 @@ ${SUPPDIR}/tck_density_filtering.mif
 
 fsl_anat --noseg --nosubcortseg \
 -i ${DERIVDIR}/T1w.nii \
--o ${SUPPDIR}/T1w.anat
+-o ${SUPPDIR}/T1w
 
 
 applywarp --ref=${SUPPDIR}/T1w.anat/T1_biascorr_brain.nii.gz \
